@@ -72,13 +72,38 @@ static PyObject *V4L2_querycap(V4L2Object *self) {
     if (eioctl(self->fd, VIDIOC_QUERYCAP, &cap, "ioctl(VIDIOC_QUERYCAP)")<0) {
         return NULL;
     }
-    return Py_BuildValue("{s:s,s:s,s:s,s:l,s:l}",
+    return Py_BuildValue("{s:s,s:s,s:s,s:I,s:I,s:I}",
             "driver",       cap.driver,
             "card",         cap.card,
             "bus_info",     cap.bus_info,
             "version",      cap.version,
-            "capabilities", cap.capabilities
+            "capabilities", cap.capabilities,
+            "device_caps",  cap.device_caps
             );
+}
+
+static PyObject *V4L2_enum_fmt(V4L2Object *self, PyObject *args) {
+    struct v4l2_fmtdesc fmtdesc;
+    fmtdesc.index=0;
+    PyObject *fmtlist, *fmtinfo;
+    if (!PyArg_ParseTuple(args, "i",
+                &fmtdesc.type)) {
+        return NULL;
+    }
+    fmtlist=PyList_New(0);
+    while(ioctl(self->fd, VIDIOC_ENUM_FMT, &fmtdesc)!=-1) {
+        fmtinfo=Py_BuildValue("{s:I,s:I,s:I,s:s,s:I}",
+                "index",        fmtdesc.index,
+                "type",         fmtdesc.type,
+                "flags",        fmtdesc.flags,
+                "description",  fmtdesc.description,
+                "pixelformat",  fmtdesc.pixelformat
+                );
+        PyList_Append(fmtlist, fmtinfo);
+        Py_XDECREF(fmtinfo);
+        fmtdesc.index++;
+    }
+    return fmtlist;
 }
 
 // Module level members --------------------------------------------------------
@@ -86,6 +111,8 @@ static PyObject *V4L2_querycap(V4L2Object *self) {
 static PyMethodDef V4L2_methods[] = {
     {"querycap",    (PyCFunction)V4L2_querycap,     METH_NOARGS,
         "querycap()"},
+    {"enum_fmt",    (PyCFunction)V4L2_enum_fmt,     METH_VARARGS,
+        "enum_fmt(type)"},
     {NULL}
 };
 
