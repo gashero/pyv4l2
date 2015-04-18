@@ -213,6 +213,30 @@ static PyObject *V4L2_enumstd(V4L2Object *self) {
     return stdlist;
 }
 
+static PyObject *V4L2_g_std(V4L2Object *self) {
+    v4l2_std_id std_id;
+    if (eioctl(self->fd, VIDIOC_G_STD, &std_id,
+                "ioctl(VIDIOC_G_STD)")<0) {
+        return NULL;
+    }
+    return Py_BuildValue("K",std_id);
+}
+
+static PyObject *V4L2_s_std(V4L2Object *self, PyObject *args) {
+    v4l2_std_id std_id=0;
+    if (!PyArg_ParseTuple(args, "K",
+                &std_id)) {
+        return NULL;
+    }
+    Py_BEGIN_ALLOW_THREADS;
+    if (eioctl(self->fd, VIDIOC_S_STD, &std_id,
+                "ioctl(VIDIOC_S_STD)")<0) {
+        return NULL;
+    }
+    Py_END_ALLOW_THREADS;
+    Py_RETURN_NONE;
+}
+
 // s_std()
 // g_std()
 
@@ -313,23 +337,133 @@ static PyObject *V4L2_qbuf(V4L2Object *self, PyObject *args) {
     }
     buf.type=self->type;
     buf.memory=self->memory;
-    //Py_BEGIN_ALLOW_THREADS;
+    Py_BEGIN_ALLOW_THREADS;
     if (eioctl(self->fd, VIDIOC_QBUF, &buf,
                 "ioctl(VIDIOC_QBUF)")<0) {
         return NULL;
     }
-    //Py_END_ALLOW_THREADS;
+    Py_END_ALLOW_THREADS;
     Py_RETURN_NONE;
 }
 
 static PyObject *V4L2_streamon(V4L2Object *self) {
     enum v4l2_buf_type type=self->type;
-    //Py_BEGIN_ALLOW_THREADS;
+    Py_BEGIN_ALLOW_THREADS;
     if (eioctl(self->fd, VIDIOC_STREAMON, &type,
                 "ioctl(VIDIOC_STREAMON)")<0) {
         return NULL;
     }
-    //Py_END_ALLOW_THREADS;
+    Py_END_ALLOW_THREADS;
+    Py_RETURN_NONE;
+}
+
+static PyObject *V4L2_streamoff(V4L2Object *self) {
+    enum v4l2_buf_type type=self->type;
+    Py_BEGIN_ALLOW_THREADS;
+    if (eioctl(self->fd, VIDIOC_STREAMOFF, &type,
+                "ioctl(VIDIOC_STREAMOFF)")<0) {
+        return NULL;
+    }
+    Py_END_ALLOW_THREADS;
+    Py_RETURN_NONE;
+}
+
+static PyObject *V4L2_dqbuf(V4L2Object *self) {
+    struct v4l2_buffer buf;
+    memset(&buf, 0, sizeof(struct v4l2_buffer));
+    buf.type=self->type;
+    buf.memory=self->memory;
+    Py_BEGIN_ALLOW_THREADS;
+    if (eioctl(self->fd, VIDIOC_DQBUF, &buf,
+                "ioctl(VIDIOC_DQBUF)")<0) {
+        return NULL;
+    }
+    Py_END_ALLOW_THREADS;
+    Py_RETURN_NONE;
+}
+
+static PyObject *V4L2_getbuffer(V4L2Object *self, PyObject *args) {
+    void *addr;
+    Py_ssize_t length;
+    if (!PyArg_ParseTuple(args, "li",
+                &addr, &length)) {
+        return NULL;
+    }
+    return PyBuffer_FromMemory(addr, length);
+}
+
+static PyObject *V4L2_queryctrl(V4L2Object *self, PyObject *args) {
+    struct v4l2_queryctrl queryctrl;
+    memset(&queryctrl, 0, sizeof(struct v4l2_queryctrl));
+    if (!PyArg_ParseTuple(args, "l",
+                &queryctrl.id)) {
+        return NULL;
+    }
+    if (eioctl(self->fd, VIDIOC_QUERYCTRL, &queryctrl,
+                "ioctl(VIDIOC_QUERYCTRL)")<0) {
+        return NULL;
+    }
+    return Py_BuildValue(
+            "{s:K,s:K,s:s,s:K,s:K,s:K,s:K,s:K}",
+            "id",       queryctrl.id,
+            "type",     queryctrl.type,
+            "name",     queryctrl.name,
+            "minimum",  queryctrl.minimum,
+            "maximum",  queryctrl.maximum,
+            "step",     queryctrl.step,
+            "default_value",    queryctrl.default_value,
+            "flags",    queryctrl.flags
+            );
+}
+
+static PyObject *V4L2_querymenu(V4L2Object *self, PyObject *args) {
+    struct v4l2_querymenu querymenu;
+    memset(&querymenu, 0, sizeof(struct v4l2_querymenu));
+    if (!PyArg_ParseTuple(args, "l",
+                &querymenu.id)) {
+        return NULL;
+    }
+    if (eioctl(self->fd, VIDIOC_QUERYMENU, &querymenu,
+                "ioctl(VIDIOC_QUERYMENU)")<0) {
+        return NULL;
+    }
+    return Py_BuildValue(
+            "{s:K,s:K,s:s}",
+            "id",       querymenu.id,
+            "index",    querymenu.index,
+            "name",     querymenu.name
+            );
+}
+
+static PyObject *V4L2_g_ctrl(V4L2Object *self, PyObject *args) {
+    struct v4l2_control ctrl;
+    memset(&ctrl, 0, sizeof(struct v4l2_control));
+    if (!PyArg_ParseTuple(args, "l",
+                &ctrl.id)) {
+        return NULL;
+    }
+    if (eioctl(self->fd, VIDIOC_G_CTRL, &ctrl,
+                "ioctl(VIDIOC_G_CTRL)")<0) {
+        return NULL;
+    }
+    return Py_BuildValue(
+            "{s:K,s:K}",
+            "id",       ctrl.id,
+            "value",    ctrl.value
+            );
+}
+
+static PyObject *V4L2_s_ctrl(V4L2Object *self, PyObject *args) {
+    struct v4l2_control ctrl;
+    memset(&ctrl, 0, sizeof(struct v4l2_control));
+    if (!PyArg_ParseTuple(args, "ll",
+                &ctrl.id, &ctrl.value)) {
+        return NULL;
+    }
+    if (eioctl(self->fd, VIDIOC_S_CTRL, &ctrl,
+                "ioctl(VIDIOC_S_CTRL)")<0) {
+        return NULL;
+    }
     Py_RETURN_NONE;
 }
 
@@ -352,6 +486,10 @@ static PyMethodDef V4L2_methods[] = {
         "g_input()"},
     {"enumstd",     (PyCFunction)V4L2_enumstd,      METH_NOARGS,
         "enumstd()"},
+    {"g_std",       (PyCFunction)V4L2_g_std,        METH_NOARGS,
+        "g_std()"},
+    {"s_std",       (PyCFunction)V4L2_s_std,        METH_VARARGS,
+        "s_std(std_id)"},
     {"reqbufs",     (PyCFunction)V4L2_reqbufs,      METH_VARARGS,
         "reqbufs(count,type,memory)"},
     {"querybuf",    (PyCFunction)V4L2_querybuf,     METH_VARARGS,
@@ -364,6 +502,20 @@ static PyMethodDef V4L2_methods[] = {
         "qbuf(bufidx)"},
     {"streamon",    (PyCFunction)V4L2_streamon,     METH_NOARGS,
         "stream()"},
+    {"streamoff",   (PyCFunction)V4L2_streamoff,    METH_NOARGS,
+        "streamoff()"},
+    {"dqbuf",       (PyCFunction)V4L2_dqbuf,        METH_NOARGS,
+        "dqbuf()"},
+    {"getbuffer",   (PyCFunction)V4L2_getbuffer,    METH_VARARGS,
+        "getbuffer(addr,length)"},
+    {"queryctrl",   (PyCFunction)V4L2_queryctrl,    METH_VARARGS,
+        "queryctrl(ctrl_id)"},
+    {"querymenu",   (PyCFunction)V4L2_querymenu,    METH_VARARGS,
+        "querymenu(menu_id)"},
+    {"g_ctrl",      (PyCFunction)V4L2_g_ctrl,       METH_VARARGS,
+        "g_ctrl(ctrl_id)"},
+    {"s_ctrl",      (PyCFunction)V4L2_s_ctrl,       METH_VARARGS,
+        "s_ctrl(ctrl_id,value)"},
     {NULL}
 };
 

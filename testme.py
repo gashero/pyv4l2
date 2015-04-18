@@ -30,14 +30,13 @@ def main():
     assert buffercount==4
     bufmap={}
     for bufidx in range(buffercount):
-        print 'x'*10,bufidx,buffercount
         bufinfo=vo.querybuf(bufidx)
-        print bufinfo,bufidx
         addr=vo.mmap(bufinfo['offset'],bufinfo['length'])
         bufmap[bufidx]=(addr,bufinfo['length'])
         vo.qbuf(bufinfo['index'])
     vo.streamon()
     #TODO:
+    vo.streamoff()
     for (bufidx,(addr,length)) in bufmap.items():
         vo.munmap(addr,length)
     return
