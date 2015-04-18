@@ -389,9 +389,26 @@ static PyObject *V4L2_getbuffer(V4L2Object *self, PyObject *args) {
                 &addr, &length)) {
         return NULL;
     }
+    return PyBuffer_FromMemory(addr, length);
+}
+
+static PyObject *V4L2_getjpeg(V4L2Object *self, PyObject *args) {
+    uint8_t *addr;
+    Py_ssize_t length;
+    if (!PyArg_ParseTuple(args, "li",
+                &addr, &length)) {
+        return NULL;
+    }
     uint32_t i;
-    for (i=length-1; i>=0 ; i--) {
+    /*for (i=length-1; i>=0 ; i--) {
         if (addr[i] != 0) {
+            break;
+        }
+    }
+    return PyBuffer_FromMemory(addr, i+1);*/
+    //i=length-1;
+    for (i=0; i<length; i++) {
+        if (addr[i]==0xd9 && addr[i-1]==0xff) {
             break;
         }
     }
@@ -518,6 +535,8 @@ static PyMethodDef V4L2_methods[] = {
         "dqbuf()"},
     {"getbuffer",   (PyCFunction)V4L2_getbuffer,    METH_VARARGS,
         "getbuffer(addr,length)"},
+    {"getjpeg",     (PyCFunction)V4L2_getjpeg,      METH_VARARGS,
+        "getjpeg(addr,length)"},
     {"fileno",      (PyCFunction)V4L2_fileno,       METH_NOARGS,
         "fileno()"},
     {"queryctrl",   (PyCFunction)V4L2_queryctrl,    METH_VARARGS,

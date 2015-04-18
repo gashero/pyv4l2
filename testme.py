@@ -11,6 +11,7 @@ manual test entry.
 import os
 import sys
 import select
+import time
 
 import v4l2
 
@@ -47,11 +48,16 @@ def main():
         assert ([vo.fileno()],[],[])==select.select([vo.fileno()],[],[],2)
         bufidx=vo.dqbuf()
         vo.qbuf(bufidx)
+    t1=time.time()
     assert ([vo.fileno()],[],[])==select.select([vo.fileno()],[],[],2)
+    t2=time.time()
     bufidx=vo.dqbuf()
     vo.qbuf(bufidx)
     bufinfo=vo.querybuf(bufidx)
-    data=vo.getbuffer(*bufmap[bufidx])
+    t3=time.time()
+    data=vo.getjpeg(*bufmap[bufidx])
+    t4=time.time()
+    print t4-t3,t3-t2,t2-t1,t4-t2
     print len(data)
     f=open('xxx.jpg','w')
     f.write(data)
