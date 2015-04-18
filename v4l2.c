@@ -76,6 +76,7 @@ static struct kvlong const_kvlong[] = {
     {"V4L2_CID_GAIN",                   V4L2_CID_GAIN},
     {"V4L2_CID_AUTOBRIGHTNESS",         V4L2_CID_AUTOBRIGHTNESS},
     {"V4L2_CID_AUDIO_MUTE",             V4L2_CID_AUDIO_MUTE},
+    {"V4L2_CID_MIN_BUFFERS_FOR_CAPTURE",V4L2_CID_MIN_BUFFERS_FOR_CAPTURE},
     {"V4L2_STD_PAL_BG",                 V4L2_STD_PAL_BG},
     {NULL}
 };

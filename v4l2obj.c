@@ -379,23 +379,33 @@ static PyObject *V4L2_dqbuf(V4L2Object *self) {
         return NULL;
     }
     Py_END_ALLOW_THREADS;
-    Py_RETURN_NONE;
+    return Py_BuildValue("I", buf.index);
 }
 
 static PyObject *V4L2_getbuffer(V4L2Object *self, PyObject *args) {
-    void *addr;
+    uint8_t *addr;
     Py_ssize_t length;
     if (!PyArg_ParseTuple(args, "li",
                 &addr, &length)) {
         return NULL;
     }
-    return PyBuffer_FromMemory(addr, length);
+    uint32_t i;
+    for (i=length-1; i>=0 ; i--) {
+        if (addr[i] != 0) {
+            break;
+        }
+    }
+    return PyBuffer_FromMemory(addr, i+1);
+}
+
+static PyObject *V4L2_fileno(V4L2Object *self) {
+    return Py_BuildValue("K", self->fd);
 }
 
 static PyObject *V4L2_queryctrl(V4L2Object *self, PyObject *args) {
     struct v4l2_queryctrl queryctrl;
     memset(&queryctrl, 0, sizeof(struct v4l2_queryctrl));
-    if (!PyArg_ParseTuple(args, "l",
+    if (!PyArg_ParseTuple(args, "I",
                 &queryctrl.id)) {
         return NULL;
     }
@@ -404,7 +414,7 @@ static PyObject *V4L2_queryctrl(V4L2Object *self, PyObject *args) {
         return NULL;
     }
     return Py_BuildValue(
-            "{s:K,s:K,s:s,s:K,s:K,s:K,s:K,s:K}",
+            "{s:I,s:I,s:s,s:i,s:i,s:i,s:i,s:I}",
             "id",       queryctrl.id,
             "type",     queryctrl.type,
             "name",     queryctrl.name,
@@ -419,7 +429,7 @@ static PyObject *V4L2_queryctrl(V4L2Object *self, PyObject *args) {
 static PyObject *V4L2_querymenu(V4L2Object *self, PyObject *args) {
     struct v4l2_querymenu querymenu;
     memset(&querymenu, 0, sizeof(struct v4l2_querymenu));
-    if (!PyArg_ParseTuple(args, "l",
+    if (!PyArg_ParseTuple(args, "I",
                 &querymenu.id)) {
         return NULL;
     }
@@ -428,7 +438,7 @@ static PyObject *V4L2_querymenu(V4L2Object *self, PyObject *args) {
         return NULL;
     }
     return Py_BuildValue(
-            "{s:K,s:K,s:s}",
+            "{s:I,s:I,s:s}",
             "id",       querymenu.id,
             "index",    querymenu.index,
             "name",     querymenu.name
@@ -438,7 +448,7 @@ static PyObject *V4L2_querymenu(V4L2Object *self, PyObject *args) {
 static PyObject *V4L2_g_ctrl(V4L2Object *self, PyObject *args) {
     struct v4l2_control ctrl;
     memset(&ctrl, 0, sizeof(struct v4l2_control));
-    if (!PyArg_ParseTuple(args, "l",
+    if (!PyArg_ParseTuple(args, "I",
                 &ctrl.id)) {
         return NULL;
     }
@@ -447,7 +457,7 @@ static PyObject *V4L2_g_ctrl(V4L2Object *self, PyObject *args) {
         return NULL;
     }
     return Py_BuildValue(
-            "{s:K,s:K}",
+            "{s:I,s:i}",
             "id",       ctrl.id,
             "value",    ctrl.value
             );
@@ -456,7 +466,7 @@ static PyObject *V4L2_g_ctrl(V4L2Object *self, PyObject *args) {
 static PyObject *V4L2_s_ctrl(V4L2Object *self, PyObject *args) {
     struct v4l2_control ctrl;
     memset(&ctrl, 0, sizeof(struct v4l2_control));
-    if (!PyArg_ParseTuple(args, "ll",
+    if (!PyArg_ParseTuple(args, "Ii",
                 &ctrl.id, &ctrl.value)) {
         return NULL;
     }
@@ -508,6 +518,8 @@ static PyMethodDef V4L2_methods[] = {
         "dqbuf()"},
     {"getbuffer",   (PyCFunction)V4L2_getbuffer,    METH_VARARGS,
         "getbuffer(addr,length)"},
+    {"fileno",      (PyCFunction)V4L2_fileno,       METH_NOARGS,
+        "fileno()"},
     {"queryctrl",   (PyCFunction)V4L2_queryctrl,    METH_VARARGS,
         "queryctrl(ctrl_id)"},
     {"querymenu",   (PyCFunction)V4L2_querymenu,    METH_VARARGS,
