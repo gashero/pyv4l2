@@ -26,13 +26,15 @@
 
 typedef struct {
     PyObject_HEAD
-    int     fd;
+    int         fd;
+    uint32_t    type;
+    uint32_t    memory;
 } V4L2Object;
 
 static int eioctl(int fd, int request, void *argp, char *errmsg) {
     int ret;
     ret=ioctl(fd, request, argp);
-    if (request<0) {
+    if (ret<0) {
         PyErr_Format(PyExc_OSError, "ERROR[%d]=\"%s\", %s",
                 errno, strerror(errno), errmsg);
     }
@@ -57,8 +59,10 @@ static PyObject *V4L2_New(PyTypeObject *type, PyObject *args, PyObject *kwds) {
 
 static int V4L2_Init(V4L2Object *self, PyObject *args, PyObject *kwds) {
     char *devname;
-    if (!PyArg_ParseTuple(args, "s",
-                &devname)) {
+    if (!PyArg_ParseTuple(args, "sII",
+                &devname,
+                &self->type,
+                &self->memory)) {
         return -1;
     }
     self->fd=open(devname,O_RDWR);
@@ -82,14 +86,11 @@ static PyObject *V4L2_querycap(V4L2Object *self) {
             );
 }
 
-static PyObject *V4L2_enum_fmt(V4L2Object *self, PyObject *args) {
+static PyObject *V4L2_enum_fmt(V4L2Object *self) {
     struct v4l2_fmtdesc fmtdesc;
     fmtdesc.index=0;
     PyObject *fmtlist, *fmtinfo;
-    if (!PyArg_ParseTuple(args, "i",
-                &fmtdesc.type)) {
-        return NULL;
-    }
+    fmtdesc.type=self->type;
     fmtlist=PyList_New(0);
     while(ioctl(self->fd, VIDIOC_ENUM_FMT, &fmtdesc)!=-1) {
         fmtinfo=Py_BuildValue("{s:I,s:I,s:I,s:s,s:I}",
@@ -106,13 +107,263 @@ static PyObject *V4L2_enum_fmt(V4L2Object *self, PyObject *args) {
     return fmtlist;
 }
 
+static PyObject *V4L2_s_fmt(V4L2Object *self, PyObject *args) {
+    struct v4l2_format format;
+    if (!PyArg_ParseTuple(args, "IIII",
+                &format.fmt.pix.width,
+                &format.fmt.pix.height,
+                &format.fmt.pix.pixelformat,
+                &format.fmt.pix.field)) {
+        return NULL;
+    }
+    format.type=self->type;
+    if (eioctl(self->fd, VIDIOC_S_FMT, &format, "ioctl(VIDIOC_S_FMT)")<0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *V4L2_enuminput(V4L2Object *self) {
+    struct v4l2_input input;
+    memset(&input, 0, sizeof(struct v4l2_input));
+    PyObject *inputlist, *inputinfo;
+    input.index=0;
+    inputlist=PyList_New(0);
+    while(ioctl(self->fd, VIDIOC_ENUMINPUT, &input)!=-1) {
+        inputinfo=Py_BuildValue(
+                "{s:I,s:s,s:I,s:I,s:I,s:K,s:I,s:I}",
+                "index",    input.index,
+                "name",     input.name,
+                "type",     input.type,
+                "audioset", input.audioset,
+                "tuner",    input.tuner,
+                "std",      input.std,
+                "status",   input.status,
+                "capabilities",input.capabilities
+                );
+        PyList_Append(inputlist, inputinfo);
+        Py_XDECREF(inputinfo);
+        input.index++;
+    }
+    return inputlist;
+}
+
+static PyObject *V4L2_enumaudio(V4L2Object *self) {
+    struct v4l2_audio audio;
+    memset(&audio, 0, sizeof(struct v4l2_audio));
+    PyObject *audiolist, *audioinfo;
+    audio.index=0;
+    audiolist=PyList_New(0);
+    while(ioctl(self->fd, VIDIOC_ENUMAUDIO, &audio)!=-1) {
+        audioinfo=Py_BuildValue(
+                "{s:I,s:s,s:I,s:I}",
+                "index",        audio.index,
+                "name",         audio.name,
+                "capability",   audio.capability,
+                "mode",         audio.mode
+                );
+        PyList_Append(audiolist, audioinfo);
+        Py_XDECREF(audioinfo);
+        audio.index++;
+    }
+    return audiolist;
+}
+
+static PyObject *V4L2_s_input(V4L2Object *self, PyObject *args) {
+    int inputnum;
+    if (!PyArg_ParseTuple(args, "i",
+                &inputnum)) {
+        return NULL;
+    }
+    if (eioctl(self->fd, VIDIOC_S_INPUT, &inputnum, "ioctl(VIDIOC_S_INPUT")<0) {
+        return NULL;
+    }
+    Py_RETURN_NONE;
+}
+
+static PyObject *V4L2_g_input(V4L2Object *self) {
+    uint32_t inputnum;
+    if (eioctl(self->fd, VIDIOC_G_INPUT, &inputnum, "ioctl(VIDIOC_G_INPUT)")<0) {
+        return NULL;
+    }
+    return Py_BuildValue("I", inputnum);
+}
+
+static PyObject *V4L2_enumstd(V4L2Object *self) {
+    struct v4l2_standard std;
+    memset(&std, 0, sizeof(struct v4l2_standard));
+    PyObject *stdlist, *stdinfo;
+    std.index=0;
+    stdlist=PyList_New(0);
+    while(ioctl(self->fd, VIDIOC_ENUMSTD, &std)!=-1) {
+        stdinfo=Py_BuildValue(
+                "{s:I,s:K,s:s,s:I,s:{s:I,s:I}}",
+                "index",        std.index,
+                "id",           std.id,
+                "name",         std.name,
+                "framelines",   std.framelines,
+                "frameperiod",
+                "numerator",    std.frameperiod.numerator,
+                "denominator",  std.frameperiod.denominator
+                );
+        PyList_Append(stdlist, stdinfo);
+        Py_XDECREF(stdinfo);
+        std.index++;
+    }
+    return stdlist;
+}
+
+// s_std()
+// g_std()
+
+static PyObject *V4L2_reqbufs(V4L2Object *self, PyObject *args) {
+    struct v4l2_requestbuffers reqbufs;
+    memset(&reqbufs, 0, sizeof(struct v4l2_requestbuffers));
+    if (!PyArg_ParseTuple(args, "I",
+                &reqbufs.count)) {
+        return NULL;
+    }
+    reqbufs.type=self->type;
+    reqbufs.memory=self->memory;
+    if (eioctl(self->fd, VIDIOC_REQBUFS, &reqbufs,
+                "ioctl(VIDIOC_REQBUFS)")<0) {
+        return NULL;
+    }
+    return Py_BuildValue("i", reqbufs.count);
+}
+
+static PyObject *V4L2_querybuf(V4L2Object *self, PyObject *args) {
+    struct v4l2_buffer buf;
+    memset(&buf, 0, sizeof(struct v4l2_buffer));
+    PyObject *bufinfo;
+    if (!PyArg_ParseTuple(args, "I",
+                &buf.index)) {
+        return NULL;
+    }
+    buf.type=self->type;
+    buf.memory=self->memory;
+    if (eioctl(self->fd, VIDIOC_QUERYBUF, &buf,
+                "ioctl(VIDIOC_QUERYBUF)")<0) {
+        return NULL;
+    }
+    bufinfo=Py_BuildValue(
+            "{s:I,s:I,s:I,s:I,s:I,s:{s:I,s:I},s:{s:I,s:I,s:I,s:I,s:I,s:I},s:I,s:I,s:K,s:I}",
+            "index",        buf.index,
+            "type",         buf.type,
+            "bytesused",    buf.bytesused,
+            "flags",        buf.flags,
+            "field",        buf.field,
+            "timestamp",
+            "tv_sec",       buf.timestamp.tv_sec,
+            "tv_usec",      buf.timestamp.tv_usec,
+            "timecode",
+            "type",         buf.timecode.type,
+            "flags",        buf.timecode.flags,
+            "frames",       buf.timecode.frames,
+            "seconds",      buf.timecode.seconds,
+            "minutes",      buf.timecode.minutes,
+            "hours",        buf.timecode.hours,
+            //"userbits",     buf.timecode.userbits,  4,
+            "sequence",     buf.sequence,
+            "memory",       buf.memory,
+            "offset",       buf.m.offset,
+            "length",       buf.length
+            //"input",        buf.input     // can not work in linux-3.12-1-amd64
+            );
+    return bufinfo;
+}
+
+static PyObject *V4L2_mmap(V4L2Object *self, PyObject *args) {
+    uint64_t offset,length;
+    void *addr;
+    if (!PyArg_ParseTuple(args, "KK",
+                &offset, &length)) {
+        return NULL;
+    }
+    addr=mmap(NULL, length,
+            PROT_READ|PROT_WRITE,
+            MAP_SHARED,
+            self->fd,
+            offset);
+    if (addr==NULL) {
+        PyErr_Format(PyExc_OSError, "ERROR[%d]=\"%s\", %s",
+                errno, strerror(errno), "mmap()");
+        return NULL;
+    }
+    return Py_BuildValue("K",addr);
+}
+
+static PyObject *V4L2_munmap(V4L2Object *self, PyObject *args) {
+    uint64_t length;
+    void *addr;
+    if (!PyArg_ParseTuple(args, "KK",
+                &addr, &length)) {
+        return NULL;
+    }
+    munmap(addr,length);
+    Py_RETURN_NONE;
+}
+
+static PyObject *V4L2_qbuf(V4L2Object *self, PyObject *args) {
+    struct v4l2_buffer buf;
+    memset(&buf, 0, sizeof(struct v4l2_buffer));
+    if (!PyArg_ParseTuple(args, "I",
+                &buf.index)) {
+        return NULL;
+    }
+    buf.type=self->type;
+    buf.memory=self->memory;
+    //Py_BEGIN_ALLOW_THREADS;
+    if (eioctl(self->fd, VIDIOC_QBUF, &buf,
+                "ioctl(VIDIOC_QBUF)")<0) {
+        return NULL;
+    }
+    //Py_END_ALLOW_THREADS;
+    Py_RETURN_NONE;
+}
+
+static PyObject *V4L2_streamon(V4L2Object *self) {
+    enum v4l2_buf_type type=self->type;
+    //Py_BEGIN_ALLOW_THREADS;
+    if (eioctl(self->fd, VIDIOC_STREAMON, &type,
+                "ioctl(VIDIOC_STREAMON)")<0) {
+        return NULL;
+    }
+    //Py_END_ALLOW_THREADS;
+    Py_RETURN_NONE;
+}
+
 // Module level members --------------------------------------------------------
 
 static PyMethodDef V4L2_methods[] = {
     {"querycap",    (PyCFunction)V4L2_querycap,     METH_NOARGS,
         "querycap()"},
-    {"enum_fmt",    (PyCFunction)V4L2_enum_fmt,     METH_VARARGS,
+    {"enum_fmt",    (PyCFunction)V4L2_enum_fmt,     METH_NOARGS,
         "enum_fmt(type)"},
+    {"s_fmt",       (PyCFunction)V4L2_s_fmt,        METH_VARARGS,
+        "s_fmt(width,height,pixelformat,field)"},
+    {"enuminput",   (PyCFunction)V4L2_enuminput,    METH_NOARGS,
+        "enuminput()"},
+    {"enumaudio",   (PyCFunction)V4L2_enumaudio,    METH_NOARGS,
+        "enumaudio()"},
+    {"s_input",     (PyCFunction)V4L2_s_input,      METH_VARARGS,
+        "s_input(inputnum)"},
+    {"g_input",     (PyCFunction)V4L2_g_input,      METH_VARARGS,
+        "g_input()"},
+    {"enumstd",     (PyCFunction)V4L2_enumstd,      METH_NOARGS,
+        "enumstd()"},
+    {"reqbufs",     (PyCFunction)V4L2_reqbufs,      METH_VARARGS,
+        "reqbufs(count,type,memory)"},
+    {"querybuf",    (PyCFunction)V4L2_querybuf,     METH_VARARGS,
+        "querybuf(bufidx,type,memory)"},
+    {"mmap",        (PyCFunction)V4L2_mmap,         METH_VARARGS,
+        "mmap(offset,length)"},
+    {"munmap",      (PyCFunction)V4L2_munmap,       METH_VARARGS,
+        "munmap(addr,length)"},
+    {"qbuf",        (PyCFunction)V4L2_qbuf,         METH_VARARGS,
+        "qbuf(bufidx)"},
+    {"streamon",    (PyCFunction)V4L2_streamon,     METH_NOARGS,
+        "stream()"},
     {NULL}
 };
 

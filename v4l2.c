@@ -27,7 +27,7 @@
 /*static int eioctl(int fd, int request, void *argp, char *errmsg) {
     int ret;
     ret=ioctl(fd, request, argp);
-    if (request<0) {
+    if (ret<0) {
         PyErr_Format(PyExc_OSError, "ERROR[%d]=\"%s\", %s",
                 errno, strerror(errno), errmsg);
     }
@@ -57,6 +57,20 @@ static struct kvlong const_kvlong[] = {
     {"V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE",  V4L2_BUF_TYPE_VIDEO_CAPTURE_MPLANE},
     {"V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE",   V4L2_BUF_TYPE_VIDEO_OUTPUT_MPLANE},
     {"V4L2_BUF_TYPE_PRIVATE",           V4L2_BUF_TYPE_PRIVATE},
+    // enum v4l2_field, not complete
+    {"V4L2_FIELD_ANY",                  V4L2_FIELD_ANY},
+    {"V4L2_FIELD_NONE",                 V4L2_FIELD_NONE},
+    {"V4L2_FIELD_TOP",                  V4L2_FIELD_TOP},
+    {"V4L2_FIELD_BOTTOM",               V4L2_FIELD_BOTTOM},
+    {"V4L2_FIELD_INTERLACED",           V4L2_FIELD_INTERLACED},
+    // v4l2_pix_fmt, not complete
+    {"V4L2_PIX_FMT_YUYV",               V4L2_PIX_FMT_YUYV},
+    {"V4L2_PIX_FMT_MJPEG",              V4L2_PIX_FMT_MJPEG},
+    // v4l2_memory
+    {"V4L2_MEMORY_MMAP",                V4L2_MEMORY_MMAP},
+    {"V4L2_MEMORY_USERPTR",             V4L2_MEMORY_USERPTR},
+    {"V4L2_MEMORY_OVERLAY",             V4L2_MEMORY_OVERLAY},
+    {"V4L2_MEMORY_DMABUF",              V4L2_MEMORY_DMABUF},
     {NULL}
 };
 
