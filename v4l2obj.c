@@ -271,7 +271,7 @@ static PyObject *V4L2_querybuf(V4L2Object *self, PyObject *args) {
         return NULL;
     }
     bufinfo=Py_BuildValue(
-            "{s:I,s:I,s:I,s:I,s:I,s:{s:I,s:I},s:{s:I,s:I,s:I,s:I,s:I,s:I},s:I,s:I,s:K,s:I}",
+            "{s:I,s:I,s:I,s:I,s:I,s:{s:I,s:I},s:{s:I,s:I,s:I,s:I,s:I,s:I},s:I,s:I,s:I,s:I}",
             "index",        buf.index,
             "type",         buf.type,
             "bytesused",    buf.bytesused,
@@ -300,7 +300,7 @@ static PyObject *V4L2_querybuf(V4L2Object *self, PyObject *args) {
 static PyObject *V4L2_mmap(V4L2Object *self, PyObject *args) {
     uint64_t offset,length;
     void *addr;
-    if (!PyArg_ParseTuple(args, "KK",
+    if (!PyArg_ParseTuple(args, "II",
                 &offset, &length)) {
         return NULL;
     }
@@ -309,18 +309,18 @@ static PyObject *V4L2_mmap(V4L2Object *self, PyObject *args) {
             MAP_SHARED,
             self->fd,
             offset);
-    if (addr==NULL) {
+    if (addr==NULL || addr==MAP_FAILED) {
         PyErr_Format(PyExc_OSError, "ERROR[%d]=\"%s\", %s",
                 errno, strerror(errno), "mmap()");
         return NULL;
     }
-    return Py_BuildValue("K",addr);
+    return Py_BuildValue("k",addr);
 }
 
 static PyObject *V4L2_munmap(V4L2Object *self, PyObject *args) {
     uint64_t length;
     void *addr;
-    if (!PyArg_ParseTuple(args, "KK",
+    if (!PyArg_ParseTuple(args, "II",
                 &addr, &length)) {
         return NULL;
     }
@@ -395,7 +395,7 @@ static PyObject *V4L2_getbuffer(V4L2Object *self, PyObject *args) {
 static PyObject *V4L2_getjpeg(V4L2Object *self, PyObject *args) {
     uint8_t *addr;
     Py_ssize_t length;
-    if (!PyArg_ParseTuple(args, "li",
+    if (!PyArg_ParseTuple(args, "ki",
                 &addr, &length)) {
         return NULL;
     }
