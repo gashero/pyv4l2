@@ -81,8 +81,8 @@ static PyObject *V4L2_querycap(V4L2Object *self) {
             "card",         cap.card,
             "bus_info",     cap.bus_info,
             "version",      cap.version,
-            "capabilities", cap.capabilities,
-            "device_caps",  cap.device_caps
+            "capabilities", cap.capabilities
+            //"device_caps",  cap.device_caps
             );
 }
 

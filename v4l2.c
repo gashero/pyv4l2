@@ -70,7 +70,7 @@ static struct kvlong const_kvlong[] = {
     {"V4L2_MEMORY_MMAP",                V4L2_MEMORY_MMAP},
     {"V4L2_MEMORY_USERPTR",             V4L2_MEMORY_USERPTR},
     {"V4L2_MEMORY_OVERLAY",             V4L2_MEMORY_OVERLAY},
-    {"V4L2_MEMORY_DMABUF",              V4L2_MEMORY_DMABUF},
+    //{"V4L2_MEMORY_DMABUF",              V4L2_MEMORY_DMABUF},
     // other constant I interest.
     {"V4L2_CID_BRIGHTNESS",             V4L2_CID_BRIGHTNESS},
     {"V4L2_CID_GAIN",                   V4L2_CID_GAIN},
