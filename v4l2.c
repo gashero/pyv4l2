@@ -83,6 +83,7 @@ static struct kvlong const_kvlong[] = {
 
 PyMODINIT_FUNC initv4l2(void) {
     PyObject *m;
+    errno=0;
     m=Py_InitModule3("v4l2", v4l2_methods, "v4l2 module");
     struct kvlong *_kv;
     for (_kv=const_kvlong; _kv->key!=NULL; _kv++) {

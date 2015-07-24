@@ -104,6 +104,7 @@ static PyObject *V4L2_enum_fmt(V4L2Object *self) {
         Py_XDECREF(fmtinfo);
         fmtdesc.index++;
     }
+    errno=0;
     return fmtlist;
 }
 
@@ -145,6 +146,7 @@ static PyObject *V4L2_enuminput(V4L2Object *self) {
         Py_XDECREF(inputinfo);
         input.index++;
     }
+    errno=0;
     return inputlist;
 }
 
@@ -166,6 +168,7 @@ static PyObject *V4L2_enumaudio(V4L2Object *self) {
         Py_XDECREF(audioinfo);
         audio.index++;
     }
+    errno=0;
     return audiolist;
 }
 
@@ -210,6 +213,7 @@ static PyObject *V4L2_enumstd(V4L2Object *self) {
         Py_XDECREF(stdinfo);
         std.index++;
     }
+    errno=0;
     return stdlist;
 }
 
@@ -298,9 +302,10 @@ static PyObject *V4L2_querybuf(V4L2Object *self, PyObject *args) {
 }
 
 static PyObject *V4L2_mmap(V4L2Object *self, PyObject *args) {
-    uint64_t offset,length;
+    long offset;
+    uint64_t length;
     void *addr;
-    if (!PyArg_ParseTuple(args, "II",
+    if (!PyArg_ParseTuple(args, "lI",
                 &offset, &length)) {
         return NULL;
     }
@@ -312,6 +317,7 @@ static PyObject *V4L2_mmap(V4L2Object *self, PyObject *args) {
     if (addr==NULL || addr==MAP_FAILED) {
         PyErr_Format(PyExc_OSError, "ERROR[%d]=\"%s\", %s",
                 errno, strerror(errno), "mmap()");
+        errno=0;
         return NULL;
     }
     return Py_BuildValue("k",addr);
