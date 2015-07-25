@@ -12,8 +12,19 @@ import os
 import sys
 import select
 import time
+import traceback
 
 import v4l2
+
+def fn_time():
+    """make a filename with time now"""
+    ts=time.time()
+    dn_dir=time.strftime('%Y%m%d_%H%M',time.localtime(ts))
+    if not os.path.exists(dn_dir):
+        os.mkdir(dn_dir)
+    ms='%.03f'%(ts-int(ts))
+    fn=time.strftime('img_%Y%m%d_%H%M%S_')+ms[2:]+'.jpg'
+    return os.path.join(dn_dir,fn)
 
 def main():
     vo=v4l2.V4L2('/dev/video0',
@@ -48,22 +59,24 @@ def main():
         assert ([vo.fileno()],[],[])==select.select([vo.fileno()],[],[],2)
         bufidx=vo.dqbuf()
         vo.qbuf(bufidx)
-    t1=time.time()
-    assert ([vo.fileno()],[],[])==select.select([vo.fileno()],[],[],2)
-    t2=time.time()
-    bufidx=vo.dqbuf()
-    vo.qbuf(bufidx)
-    bufinfo=vo.querybuf(bufidx)
-    t3=time.time()
-    data=vo.getjpeg(*bufmap[bufidx])
-    t4=time.time()
-    print t4-t3,t3-t2,t2-t1,t4-t2
-    print len(data)
-    f=open('xxx.jpg','w')
-    f.write(data)
-    f.close()
-    assert data[-2:]=='\xff\xd9'
-    #TODO:
+    while True:
+        try:
+            assert ([vo.fileno()],[],[])==select.select([vo.fileno()],[],[],2)
+            bufidx=vo.dqbuf()
+            vo.qbuf(bufidx)
+            bufinfo=vo.querybuf(bufidx)
+            data=vo.getjpeg(*bufmap[bufidx])
+            fn=fn_time()
+            f=open(fn,'w')
+            f.write(data)
+            f.close()
+            assert data[-2:]=='\xff\xd9',repr(data[-256:])
+        except KeyboardInterrupt:
+            break
+        except Exception,ex:
+            flog=open('error.log','a+')
+            flog.write(traceback.format_exc()+'\n')
+            flog.close()
     vo.streamoff()
     for (bufidx,(addr,length)) in bufmap.items():
         vo.munmap(addr,length)
