@@ -422,7 +422,7 @@ static PyObject *V4L2_getjpeg(V4L2Object *self, PyObject *args) {
 }
 
 static PyObject *V4L2_fileno(V4L2Object *self) {
-    return Py_BuildValue("K", self->fd);
+    return Py_BuildValue("I", self->fd);
 }
 
 static PyObject *V4L2_queryctrl(V4L2Object *self, PyObject *args) {
