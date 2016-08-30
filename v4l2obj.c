@@ -33,7 +33,9 @@ typedef struct {
 
 static int eioctl(int fd, int request, void *argp, char *errmsg) {
     int ret;
+    Py_BEGIN_ALLOW_THREADS;
     ret=ioctl(fd, request, argp);
+    Py_END_ALLOW_THREADS;
     if (ret<0) {
         PyErr_Format(PyExc_OSError, "ERROR[%d]=\"%s\", %s",
                 errno, strerror(errno), errmsg);
@@ -232,12 +234,10 @@ static PyObject *V4L2_s_std(V4L2Object *self, PyObject *args) {
                 &std_id)) {
         return NULL;
     }
-    Py_BEGIN_ALLOW_THREADS;
     if (eioctl(self->fd, VIDIOC_S_STD, &std_id,
                 "ioctl(VIDIOC_S_STD)")<0) {
         return NULL;
     }
-    Py_END_ALLOW_THREADS;
     Py_RETURN_NONE;
 }
 
@@ -343,34 +343,28 @@ static PyObject *V4L2_qbuf(V4L2Object *self, PyObject *args) {
     }
     buf.type=self->type;
     buf.memory=self->memory;
-    Py_BEGIN_ALLOW_THREADS;
     if (eioctl(self->fd, VIDIOC_QBUF, &buf,
                 "ioctl(VIDIOC_QBUF)")<0) {
         return NULL;
     }
-    Py_END_ALLOW_THREADS;
     Py_RETURN_NONE;
 }
 
 static PyObject *V4L2_streamon(V4L2Object *self) {
     enum v4l2_buf_type type=self->type;
-    Py_BEGIN_ALLOW_THREADS;
     if (eioctl(self->fd, VIDIOC_STREAMON, &type,
                 "ioctl(VIDIOC_STREAMON)")<0) {
         return NULL;
     }
-    Py_END_ALLOW_THREADS;
     Py_RETURN_NONE;
 }
 
 static PyObject *V4L2_streamoff(V4L2Object *self) {
     enum v4l2_buf_type type=self->type;
-    Py_BEGIN_ALLOW_THREADS;
     if (eioctl(self->fd, VIDIOC_STREAMOFF, &type,
                 "ioctl(VIDIOC_STREAMOFF)")<0) {
         return NULL;
     }
-    Py_END_ALLOW_THREADS;
     Py_RETURN_NONE;
 }
 
@@ -379,12 +373,10 @@ static PyObject *V4L2_dqbuf(V4L2Object *self) {
     memset(&buf, 0, sizeof(struct v4l2_buffer));
     buf.type=self->type;
     buf.memory=self->memory;
-    Py_BEGIN_ALLOW_THREADS;
     if (eioctl(self->fd, VIDIOC_DQBUF, &buf,
                 "ioctl(VIDIOC_DQBUF)")<0) {
         return NULL;
     }
-    Py_END_ALLOW_THREADS;
     return Py_BuildValue("I", buf.index);
 }
 
